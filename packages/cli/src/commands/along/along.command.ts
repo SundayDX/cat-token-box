@@ -123,7 +123,8 @@ export class AlongCommand extends BoardcastCommand {
                     options.id,
                 );
 
-                const times = options.times || 1;
+                let times = options.times || feeUtxos.length;
+                times = times > feeUtxos.length ? feeUtxos.length : times;
                 const feeUtxosArr = [];
 
                 const nums = options.nums || 1;
