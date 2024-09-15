@@ -136,7 +136,7 @@ export class AlongCommand extends BoardcastCommand {
                 }
 
                 for (let i = 0; i < times; i++) {
-                    const utxos = feeUtxosArr[i];
+                    const feeUtxos = feeUtxosArr[i];
 
                     const count = await getTokenMinterCount(
                         this.configService,
