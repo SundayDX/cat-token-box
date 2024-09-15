@@ -277,6 +277,10 @@ export class AlongCommand extends BoardcastCommand {
             return this.spendService.isUnspent(utxo);
         });
 
+        feeUtxos = feeUtxos.filter((utxo) => {
+            return utxo.satoshis >= 10000;
+        });
+
         if (feeUtxos.length === 0) {
             console.warn('Insufficient satoshis balance!');
             return [];
