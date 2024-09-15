@@ -28,7 +28,6 @@ import { calcTotalAmount, sendToken } from '../send/ft';
 import { pickLargeFeeUtxo } from '../send/pick';
 interface MintCommandOptions extends BoardcastCommandOptions {
   id: string;
-  one?: boolean;
   new?: number;
 }
 
@@ -91,11 +90,6 @@ export class MintCommand extends BoardcastCommand {
           if (feeUtxos.length === 0) {
             console.warn('Insufficient satoshis balance!');
             return;
-          }
-
-          if (options.one) {
-            const feeUtxo = pickLargeFeeUtxo(feeUtxos);
-            feeUtxos = [feeUtxo];
           }
 
           const count = await getTokenMinterCount(
@@ -276,14 +270,6 @@ export class MintCommand extends BoardcastCommand {
   })
   parseId(val: string): string {
     return val;
-  }
-
-  @Option({
-    flags: '-o, --one',
-    description: 'mint one token',
-  })
-  parseOne(val: string): boolean {
-    return val === 'true';
   }
 
   async getFeeUTXOs(address: btc.Address) {
