@@ -59,7 +59,7 @@ export class AlongCommand extends BoardcastCommand {
             console.log(utxos);
         }
 
-        else if (options.action === 'limitcheck') {
+        else if (options.action === 'info') {
             if (!options.id) {
                 console.error('expect a ID option');
                 return;
@@ -78,6 +78,13 @@ export class AlongCommand extends BoardcastCommand {
 
             const scaledInfo = scaleConfig(token.info as OpenMinterTokenInfo);
             console.log('token info', scaledInfo);
+
+            const count = await getTokenMinterCount(
+                this.configService,
+                token.tokenId,
+            );
+
+            console.log('count', count);
         }
 
         else if (options.action === 'split') {
