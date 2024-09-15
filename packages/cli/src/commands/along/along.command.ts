@@ -30,6 +30,7 @@ interface AlongCommandOptions extends BoardcastCommandOptions {
     id?: string;
     action: string;
     nums?: number;
+    times?: number;
     split?: number;
 }
 
@@ -117,94 +118,106 @@ export class AlongCommand extends BoardcastCommand {
                     return;
                 }
 
-                if (options.nums && options.nums < feeUtxos.length) {
-                    feeUtxos = feeUtxos.slice(0, options.nums);
-                }
-
                 const token = await findTokenMetadataById(
                     this.configService,
                     options.id,
                 );
 
-                const count = await getTokenMinterCount(
-                    this.configService,
-                    token.tokenId,
-                );
+                const times = options.times || 1;
+                const feeUtxosArr = [];
 
-                if (count == 0) {
-                    console.error('No available minter UTXO found!');
-                    return;
+                const nums = options.nums || 1;
+                let perTimes = Math.floor(feeUtxos.length / times);
+                perTimes = perTimes > 0 ? perTimes : 1;
+                perTimes = perTimes > nums ? perTimes : nums;
+                for (let i = 0; i < times; i++) {
+                    const utxos = feeUtxos.slice(i * perTimes, (i + 1) * perTimes);
+                    feeUtxosArr.push(utxos);
                 }
 
-                const offset = getRandomInt(count - 1);
-                const minter = await getTokenMinter(
-                    this.configService,
-                    this.walletService,
-                    token,
-                    offset,
-                );
+                for (let i = 0; i < times; i++) {
+                    const utxos = feeUtxosArr[i];
 
-                if (minter == null) {
-                    return;
-                }
+                    const count = await getTokenMinterCount(
+                        this.configService,
+                        token.tokenId,
+                    );
 
-                if (isOpenMinter(token.info.minterMd5)) {
-                    const minterState = minter.state.data;
-                    const scaledInfo = scaleConfig(token.info as OpenMinterTokenInfo);
-                    const limit = scaledInfo.limit;
-
-                    if (minter.state.data.remainingSupply < limit) {
-                        console.warn(
-                            `small limit of ${unScaleByDecimals(limit, token.info.decimals)} in the minter UTXO!`,
-                        );
-                        log(`retry to mint token [${token.info.symbol}] ...`);
+                    if (count == 0) {
+                        console.error('No available minter UTXO found!');
                         return;
                     }
 
-                    let amount: bigint | undefined;
-                    if (!minter.state.data.isPremined && scaledInfo.premine > 0n) {
-                        amount = scaledInfo.premine;
-                    } else {
-                        amount = amount || limit;
-                        amount =
-                            amount > minter.state.data.remainingSupply
-                                ? minter.state.data.remainingSupply
-                                : amount;
-                    }
-
-                    const mintTxIdOrErr = await openMint(
+                    const offset = getRandomInt(count - 1);
+                    const minter = await getTokenMinter(
                         this.configService,
                         this.walletService,
-                        this.spendService,
-                        feeRate,
-                        feeUtxos,
                         token,
-                        2,
-                        minter,
-                        amount,
+                        offset,
                     );
 
-                    if (mintTxIdOrErr instanceof Error) {
-                        if (needRetry(mintTxIdOrErr)) {
-                            // throw these error, so the caller can handle it.
-                            log(`retry to mint token [${token.info.symbol}] ...`);
-                            await sleep(6);
-                            return;
-                        } else {
-                            logerror(
-                                `mint token [${token.info.symbol}] failed`,
-                                mintTxIdOrErr,
-                            );
-                            return;
-                        }
+                    if (minter == null) {
+                        return;
                     }
 
-                    console.log(
-                        `Minting ${unScaleByDecimals(amount, token.info.decimals)} ${token.info.symbol} tokens in txid: ${mintTxIdOrErr} ...`,
-                    );
-                    return;
-                } else {
-                    throw new Error('unkown minter!');
+                    if (isOpenMinter(token.info.minterMd5)) {
+                        const minterState = minter.state.data;
+                        const scaledInfo = scaleConfig(token.info as OpenMinterTokenInfo);
+                        const limit = scaledInfo.limit;
+
+                        if (minter.state.data.remainingSupply < limit) {
+                            console.warn(
+                                `small limit of ${unScaleByDecimals(limit, token.info.decimals)} in the minter UTXO!`,
+                            );
+                            log(`retry to mint token [${token.info.symbol}] ...`);
+                            return;
+                        }
+
+                        let amount: bigint | undefined;
+                        if (!minter.state.data.isPremined && scaledInfo.premine > 0n) {
+                            amount = scaledInfo.premine;
+                        } else {
+                            amount = amount || limit;
+                            amount =
+                                amount > minter.state.data.remainingSupply
+                                    ? minter.state.data.remainingSupply
+                                    : amount;
+                        }
+
+                        const mintTxIdOrErr = await openMint(
+                            this.configService,
+                            this.walletService,
+                            this.spendService,
+                            feeRate,
+                            feeUtxos,
+                            token,
+                            2,
+                            minter,
+                            amount,
+                        );
+
+                        if (mintTxIdOrErr instanceof Error) {
+                            if (needRetry(mintTxIdOrErr)) {
+                                // throw these error, so the caller can handle it.
+                                log(`retry to mint token [${token.info.symbol}] ...`);
+                                await sleep(6);
+                                return;
+                            } else {
+                                logerror(
+                                    `mint token [${token.info.symbol}] failed`,
+                                    mintTxIdOrErr,
+                                );
+                                return;
+                            }
+                        }
+
+                        console.log(
+                            `Minting ${unScaleByDecimals(amount, token.info.decimals)} ${token.info.symbol} tokens in txid: ${mintTxIdOrErr} ...`,
+                        );
+                        return;
+                    } else {
+                        throw new Error('unkown minter!');
+                    }
                 }
             }
 
@@ -242,6 +255,14 @@ export class AlongCommand extends BoardcastCommand {
         description: 'mint token use nums uxtos',
     })
     parseNums(val: string): number {
+        return parseInt(val);
+    }
+
+    @Option({
+        flags: '-t, --times [times]',
+        description: 'mint token use times',
+    })
+    parseTimes(val: string): number {
         return parseInt(val);
     }
 
