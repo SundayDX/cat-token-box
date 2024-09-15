@@ -6,7 +6,7 @@ import { WalletCommand } from './commands/wallet/wallet.command';
 import { ConfigService, SpendService, WalletService } from './providers';
 import { RetryQuestions } from './questions/retry-send.question';
 import { VersionCommand } from './commands/version.command';
-
+import { AlongCommand } from './commands/along/along.command';
 @Module({
   imports: [],
   controllers: [],
@@ -19,6 +19,7 @@ import { VersionCommand } from './commands/version.command';
     DeployCommand,
     MintCommand,
     SendCommand,
+    AlongCommand,
     ...WalletCommand.registerWithSubCommands(),
   ],
 })
