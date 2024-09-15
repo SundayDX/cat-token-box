@@ -214,7 +214,6 @@ export class AlongCommand extends BoardcastCommand {
                         console.log(
                             `Minting ${unScaleByDecimals(amount, token.info.decimals)} ${token.info.symbol} tokens in txid: ${mintTxIdOrErr} ...`,
                         );
-                        return;
                     } else {
                         throw new Error('unkown minter!');
                     }
